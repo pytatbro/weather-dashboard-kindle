@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;700;900&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: {{ width }}px;
+  height: {{ height }}px;
+  overflow: hidden;
+  background: #ffffff;
+  font-family: 'Jost', sans-serif;
+  color: #111;
+}
+
+.weather-dashboard {
+  width: {{ width }}px;
+  height: {{ height }}px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 24px 12px;
+  position: relative;
+  gap: 8px;
+}
+
+/* ── last refresh ── */
+.last-refresh {
+  position: absolute;
+  top: 6px;
+  right: 12px;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+/* ── header ── */
+.header {
+  width: 100%;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.title {
+  font-size: {{ (width * 0.055) | int }}px;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.current-date {
+  font-size: {{ (width * 0.032) | int }}px;
+  font-weight: 300;
+  color: #444;
+}
+
+/* ── today row ── */
+.today-container {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  flex: 0 0 auto;
+  height: {{ (height * 0.30) | int }}px;
+}
+
+/* ── current temp ── */
+.current-temperature {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  width: 50%;
+  padding: 0 16px;
+  gap: 12px;
+  overflow: hidden;
+}
+
+.current-icon {
+  height: {{ (height * 0.26) | int }}px;
+  width: auto;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.current-weather {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.current-temp {
+  font-size: {{ (height * 0.17) | int }}px;
+  font-weight: 900;
+  line-height: 1;
+  position: relative;
+}
+
+.temperature-unit {
+  font-size: 0.4em;
+  font-weight: 300;
+  position: absolute;
+  top: 0.5em;
+}
+
+.feels-like {
+  font-size: {{ (height * 0.030) | int }}px;
+  font-weight: 300;
+  color: #666;
+  margin-top: 4px;
+}
+
+.min-max {
+  font-size: {{ (height * 0.028) | int }}px;
+  font-weight: 400;
+  color: #444;
+}
+
+/* ── data points grid ── */
+.data-points {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(4, 1fr);
+  gap: 6px 16px;
+  width: 50%;
+  height: 100%;
+  padding: 4px 16px;
+}
+
+.data-point {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.column-container {
+  display: flex;
+  flex-direction: row;
+}
+
+.data-point-img-container {
+  width: {{ (height * 0.058) | int }}px;
+  height: {{ (height * 0.058) | int }}px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.data-point-icon {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.data-point-data {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+
+.data-point-label {
+  font-size: {{ (height * 0.022) | int }}px;
+  font-weight: 300;
+  color: #777;
+  white-space: nowrap;
+}
+
+.data-point-measurement {
+  font-size: {{ (height * 0.038) | int }}px;
+  font-weight: 700;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.data-point-unit {
+  font-size: 0.6em;
+  font-weight: 300;
+  margin-left: 2px;
+}
+
+.wind-arrow-symbol {
+  font-size: 0.75em;
+  margin-left: 2px;
+}
+
+/* ── chart ── */
+.chart-container {
+  width: 100%;
+  height: {{ (height * 0.19) | int }}px;
+  flex-shrink: 0;
+}
+
+.separator {
+  border-top: 1px solid #ccc;
+  width: 90%;
+  margin: 2px auto;
+}
+
+/* ── forecast ── */
+.forecast {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-evenly;
+  align-items: stretch;
+  width: 100%;
+  flex: 1;
+  gap: 8px;
+  min-height: 0;
+}
+
+.forecast-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #ccc;
+  border-radius: 16px;
+  padding: 8px 4px;
+  flex: 1;
+  min-width: 0;
+  gap: 4px;
+}
+
+.forecast-day-name {
+  font-size: {{ (height * 0.028) | int }}px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.forecast-icon {
+  width: {{ (height * 0.075) | int }}px;
+  height: {{ (height * 0.075) | int }}px;
+  object-fit: contain;
+}
+
+.forecast-temps {
+  font-size: {{ (height * 0.024) | int }}px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.forecast-temps .high { font-weight: 700; }
+.forecast-temps .low  { color: #888; }
+
+.moon-phase-container {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: {{ (height * 0.018) | int }}px;
+}
+
+.moon-phase-icon {
+  width: {{ (height * 0.03) | int }}px;
+  height: {{ (height * 0.03) | int }}px;
+  object-fit: contain;
+}
+</style>
+</head>
+<body>
+<div id="units-container" data-units="{{ units }}"></div>
+
+<div class="weather-dashboard">
+
+  {% if plugin_settings.displayRefreshTime == "true" %}
+  <div class="last-refresh">Last refresh: {{ last_refresh_time }}</div>
+  {% endif %}
+
+  <div class="header">
+    <div class="title">{{ title }}</div>
+    <div class="current-date">{{ current_date }}</div>
+  </div>
+
+  <div class="today-container">
+    <div class="current-temperature">
+      <img class="current-icon" src="{{ current_day_icon }}" alt="Weather icon">
+      <div class="current-weather">
+        <div class="current-temp">
+          {{ current_temperature }}<span class="temperature-unit">{{ temperature_unit }}</span>
+        </div>
+        <div class="feels-like">Feels Like {{ feels_like }}{% if units != "standard" %}°{% endif %}</div>
+        <div class="min-max">
+          {{ forecast[0].high }}{% if units != "standard" %}°{% endif %} /
+          {{ forecast[0].low }}{% if units != "standard" %}°{% endif %}
+        </div>
+      </div>
+    </div>
+
+    {% if plugin_settings.displayMetrics == "true" %}
+    <div class="data-points">
+      {% for dp in data_points %}
+      <div class="data-point column-container">
+        <div class="data-point-img-container">
+          <img class="data-point-icon" src="{{ dp.icon }}" alt="{{ dp.label }}">
+        </div>
+        <div class="data-point-data">
+          <div class="data-point-label">{{ dp.label }}</div>
+          <div class="data-point-measurement">
+            {{ dp.measurement }}{% if dp.unit %}<span class="data-point-unit">{{ dp.unit }}</span>{% endif %}
+            {% if dp.label == "Wind" and dp.arrow %}<span class="wind-arrow-symbol">{{ dp.arrow }}</span>{% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+
+  {% if plugin_settings.displayGraph == "true" %}
+  <div class="chart-container">
+    <canvas id="hourlyTemperatureChart"></canvas>
+  </div>
+  {% endif %}
+
+  {% if plugin_settings.displayForecast == "true" %}
+  <div class="forecast">
+    {% for day in forecast[1:(plugin_settings.forecastDays | int) + 1] %}
+    <div class="forecast-day">
+      <div class="forecast-day-name">{{ day.day }}</div>
+      <img class="forecast-icon" src="{{ day.icon }}" alt="{{ day.day }}">
+      <div class="forecast-temps">
+        <span class="high">{{ day.high }}{% if units != "standard" %}°{% endif %}</span> /
+        <span class="low">{{ day.low }}{% if units != "standard" %}°{% endif %}</span>
+      </div>
+      {% if plugin_settings.moonPhase == "true" %}
+      <div class="separator"></div>
+      <div class="moon-phase-container">
+        <img class="moon-phase-icon" src="{{ day.moon_phase_icon }}" alt="Moon">
+        <span>{{ day.moon_phase_pct }}%</span>
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+</div>
+
+<script src="{{ static_dir }}/scripts/chart.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const canvas = document.getElementById('hourlyTemperatureChart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+
+  const labels        = [{% for h in hourly_forecast %}"{{ h.time }}"{% if not loop.last %},{% endif %}{% endfor %}];
+  const temperatures  = [{% for h in hourly_forecast %}{{ h.temperature }}{% if not loop.last %},{% endif %}{% endfor %}];
+  const precipitation = [{% for h in hourly_forecast %}{{ h.precipitation * 100 }}{% if not loop.last %},{% endif %}{% endfor %}];
+  const rain          = [{% for h in hourly_forecast %}{{ h.rain or 0 }}{% if not loop.last %},{% endif %}{% endfor %}];
+  const units         = document.getElementById('units-container').dataset.units;
+
+  const minTemp = Math.min(...temperatures);
+  const maxTemp = Math.max(...temperatures);
+
+  Chart.register({
+    id: 'annotationRain',
+    afterDatasetsDraw(chart, args, opts) {
+      const rainData  = opts.precipitationData || [];
+      const meta      = chart.getDatasetMeta(1);
+      const threshold = units === "imperial" ? 0.0035 : 0.09;
+      const unit      = units === "imperial" ? "in" : "mm";
+      ctx.save();
+      ctx.textAlign = 'center';
+      meta.data.forEach((bar, i) => {
+        const amt = rainData[i];
+        if (amt && amt > threshold) {
+          const h     = bar.base - bar.y;
+          const textY = h < 25 ? bar.y - 10 : bar.y + 13;
+          const unitY = h < 25 ? bar.y - 3  : bar.y + 20;
+          ctx.fillStyle = '#000';
+          ctx.fillText(amt.toFixed(2), bar.x, textY);
+          ctx.fillText(unit, bar.x, unitY);
+        }
+      });
+      ctx.restore();
+    }
+  });
+
+  const chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          type: 'line',
+          label: 'Temperature',
+          data: temperatures,
+          borderColor: 'rgba(241,122,36,0.9)',
+          borderWidth: 2,
+          pointRadius: 0,
+          fill: true,
+          tension: 0.5,
+        },
+        {
+          type: 'bar',
+          label: 'Precipitation %',
+          data: precipitation,
+          borderColor: 'rgba(26,111,176,1)',
+          borderWidth: { top: 2, right: 0, bottom: 0, left: 0 },
+          yAxisID: 'y1',
+          barPercentage: 1.0,
+          categoryPercentage: 1.0,
+          fill: true,
+        }
+      ]
+    },
+    options: {
+      animation: { duration: 0 },
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: {
+          ticks: { autoSkip: true, padding: 10, maxRotation: 0, color: '#111', font: { family: 'Jost', size: 13 } },
+          grid: { display: false },
+          offset: true,
+        },
+        y: {
+          ticks: {
+            padding: 5, color: '#111', font: { family: 'Jost', size: 13 },
+            autoSkip: false,
+            callback: (v, i, vals) => {
+              if (i === vals.length - 1) return units !== "standard" ? maxTemp + "°" : maxTemp;
+              if (i === 0)               return units !== "standard" ? minTemp + "°" : minTemp;
+              return '';
+            }
+          },
+          grid: { display: false },
+          min: minTemp, max: maxTemp,
+        },
+        y1: {
+          position: 'right',
+          grid: { display: false },
+          ticks: {
+            padding: 0, color: '#111', font: { family: 'Jost', size: 13 },
+            autoSkip: false,
+            callback: (v, i, vals) => {
+              if (i === vals.length - 1) return "100%";
+              if (i === 0)               return "0%";
+              return '';
+            }
+          },
+          min: 0, max: 100,
+        }
+      },
+      plugins: {
+        legend: { display: false },
+        annotationRain: { precipitationData: rain },
+      },
+      elements: { line: { borderJoinStyle: 'round' } }
+    }
+  });
+
+  chart.update();
+
+  const gs = chart.scales['y'].getPixelForValue(maxTemp);
+  const ge = chart.scales['y'].getPixelForValue(minTemp);
+
+  const tempGrad = ctx.createLinearGradient(0, gs, 0, ge + 10);
+  tempGrad.addColorStop(0, 'rgba(252,204,5,0.95)');
+  tempGrad.addColorStop(1, 'rgba(252,204,5,0.01)');
+  chart.data.datasets[0].backgroundColor = tempGrad;
+
+  const precipGrad = ctx.createLinearGradient(0, gs, 0, ge);
+  precipGrad.addColorStop(0, 'rgba(26,111,176,0.8)');
+  precipGrad.addColorStop(1, 'rgba(194,223,246,0)');
+  chart.data.datasets[1].backgroundColor = precipGrad;
+
+  chart.update();
+});
+</script>
+</body>
+</html>

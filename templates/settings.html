@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weather Dashboard Settings</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0f11;
+    --surface: #18181c;
+    --border: #2a2a30;
+    --accent: #4ade80;
+    --accent-dim: rgba(74,222,128,0.12);
+    --text: #e8e8ec;
+    --muted: #666670;
+    --error: #f87171;
+    --warn: #fbbf24;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    padding: 2rem 1rem;
+  }
+
+  .container {
+    max-width: 680px;
+    margin: 0 auto;
+  }
+
+  header {
+    margin-bottom: 2.5rem;
+  }
+
+  header h1 {
+    font-size: 1.6rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  header p {
+    color: var(--muted);
+    margin-top: 0.4rem;
+    font-size: 0.9rem;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .card-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-bottom: 1.2rem;
+  }
+
+  .field {
+    margin-bottom: 1.1rem;
+  }
+
+  .field:last-child { margin-bottom: 0; }
+
+  label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 0.4rem;
+  }
+
+  label span {
+    color: var(--muted);
+    font-weight: 400;
+    font-size: 0.8rem;
+    margin-left: 0.3rem;
+  }
+
+  input, select {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.9rem;
+    padding: 0.6rem 0.9rem;
+    transition: border-color 0.15s;
+    outline: none;
+  }
+
+  input:focus, select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-dim);
+  }
+
+  select option { background: var(--surface); }
+
+  .row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.8rem;
+  }
+
+  .actions {
+    display: flex;
+    gap: 0.8rem;
+    margin-top: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  button {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    padding: 0.65rem 1.4rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #0a0a0a;
+    flex: 1;
+  }
+
+  .btn-primary:hover { background: #6eedA0; transform: translateY(-1px); }
+  .btn-primary:active { transform: translateY(0); }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+    flex: 1;
+  }
+
+  .btn-secondary:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .btn-preview {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    font-size: 0.85rem;
+  }
+
+  .btn-preview:hover { color: var(--text); border-color: var(--text); }
+
+  .status {
+    margin-top: 1rem;
+    padding: 0.7rem 1rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-family: 'DM Mono', monospace;
+    display: none;
+  }
+
+  .status.success {
+    background: var(--accent-dim);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    display: block;
+  }
+
+  .status.error {
+    background: rgba(248,113,113,0.1);
+    border: 1px solid var(--error);
+    color: var(--error);
+    display: block;
+  }
+
+  .status.loading {
+    background: rgba(251,191,36,0.1);
+    border: 1px solid var(--warn);
+    color: var(--warn);
+    display: block;
+  }
+
+  .preview-section {
+    margin-top: 1.5rem;
+  }
+
+  .preview-section img {
+    width: 100%;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    display: block;
+  }
+
+  .preview-label {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-bottom: 0.5rem;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    display: inline-block;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .kindle-note {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-top: 0.4rem;
+    font-family: 'DM Mono', monospace;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1><span class="dot"></span> Weather Dashboard</h1>
+    <p>Configure your Kindle weather display</p>
+  </header>
+
+  <div class="card">
+    <div class="card-title">Location</div>
+    <div class="field">
+      <label>City Name <span>displayed on dashboard</span></label>
+      <input type="text" id="city" value="{{ config.city }}" placeholder="e.g. St. Catharines">
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Latitude</label>
+        <input type="number" id="latitude" value="{{ config.latitude }}" step="0.0001" placeholder="43.1594">
+      </div>
+      <div class="field">
+        <label>Longitude</label>
+        <input type="number" id="longitude" value="{{ config.longitude }}" step="0.0001" placeholder="-79.2469">
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Display</div>
+    <div class="row">
+      <div class="field">
+        <label>Units</label>
+        <select id="units">
+          <option value="metric" {% if config.units == 'metric' %}selected{% endif %}>Metric (°C)</option>
+          <option value="imperial" {% if config.units == 'imperial' %}selected{% endif %}>Imperial (°F)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Refresh Interval <span>minutes</span></label>
+        <input type="number" id="refresh_interval" value="{{ config.refresh_interval }}" min="5" max="1440">
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Width <span>px</span></label>
+        <input type="number" id="width" value="{{ config.width }}" min="400" max="2000">
+      </div>
+      <div class="field">
+        <label>Height <span>px</span></label>
+        <input type="number" id="height" value="{{ config.height }}" min="400" max="3000">
+      </div>
+    </div>
+    <p class="kindle-note">Kindle Paperwhite (all models): 1072 × 1448 px</p>
+  </div>
+
+  <div class="actions">
+    <button class="btn-secondary" onclick="saveSettings()">💾 Save Settings</button>
+    <button class="btn-primary" onclick="generateNow()">⚡ Generate Now</button>
+  </div>
+
+  <div id="status" class="status"></div>
+
+  <div class="preview-section" id="previewSection" style="display:none">
+    <p class="preview-label">// last generated output</p>
+    <img id="previewImg" src="" alt="Weather preview">
+    <div class="actions" style="margin-top:0.8rem">
+      <button class="btn-preview" onclick="window.open('/preview','_blank')">Open full size ↗</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  function showStatus(msg, type) {
+    const el = document.getElementById('status');
+    el.textContent = msg;
+    el.className = 'status ' + type;
+  }
+
+  function getFormData() {
+    return {
+      city: document.getElementById('city').value,
+      latitude: document.getElementById('latitude').value,
+      longitude: document.getElementById('longitude').value,
+      units: document.getElementById('units').value,
+      width: document.getElementById('width').value,
+      height: document.getElementById('height').value,
+      refresh_interval: document.getElementById('refresh_interval').value,
+    };
+  }
+
+  async function saveSettings() {
+    showStatus('Saving...', 'loading');
+    try {
+      const res = await fetch('/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(getFormData())
+      });
+      const data = await res.json();
+      showStatus('✓ Settings saved successfully', 'success');
+    } catch (e) {
+      showStatus('✗ Failed to save: ' + e.message, 'error');
+    }
+  }
+
+  async function generateNow() {
+    showStatus('⏳ Fetching weather and generating image...', 'loading');
+    try {
+      // Save first, then generate
+      await fetch('/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(getFormData())
+      });
+
+      const res = await fetch('/generate');
+      const data = await res.json();
+
+      if (data.status === 'ok') {
+        showStatus('✓ ' + data.message, 'success');
+        // Show preview
+        const previewSection = document.getElementById('previewSection');
+        const previewImg = document.getElementById('previewImg');
+        previewImg.src = '/preview?t=' + Date.now();
+        previewSection.style.display = 'block';
+      } else {
+        showStatus('✗ Error: ' + data.message, 'error');
+      }
+    } catch (e) {
+      showStatus('✗ ' + e.message, 'error');
+    }
+  }
+
+  // Check if preview already exists on load
+  window.onload = async () => {
+    try {
+      const res = await fetch('/preview', { method: 'HEAD' });
+      if (res.ok) {
+        document.getElementById('previewImg').src = '/preview?t=' + Date.now();
+        document.getElementById('previewSection').style.display = 'block';
+      }
+    } catch(e) {}
+  };
+</script>
+</body>
+</html>
