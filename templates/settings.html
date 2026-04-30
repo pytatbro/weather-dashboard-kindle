@@ -339,7 +339,7 @@
   }
 
   async function generateNow() {
-    showStatus('⏳ Fetching weather and generating image...', 'loading');
+    showStatus('⏳ Fetching weather data...', 'loading');
     try {
       // Save first, then generate
       await fetch('/save', {

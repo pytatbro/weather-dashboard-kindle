@@ -92,6 +92,35 @@ def map_weather_code_to_icon(code, is_day=1):
         icon = night_map.get(icon, icon)
     return icon
 
+def weathercode_to_info(code):
+    mapping = {
+        0:  "Clear Sky",
+        1:  "Mainly Clear",
+        2:  "Partly Cloudy",
+        3:  "Overcast",
+        45: "Foggy",
+        48: "Icy Fog",
+        51: "Light Drizzle",
+        53: "Drizzle",
+        55: "Heavy Drizzle",
+        61: "Light Rain",
+        63: "Rain",
+        65: "Heavy Rain",
+        71: "Light Snow",
+        73: "Snow",
+        75: "Heavy Snow",
+        77: "Snow Grains",
+        80: "Light Showers",
+        81: "Showers",
+        82: "Heavy Showers",
+        85: "Snow Showers",
+        86: "Heavy Snow Showers",
+        95: "Thunderstorm",
+        96: "Thunderstorm",
+        99: "Thunderstorm",
+    }
+    return mapping.get(code, "Unknown")
+
 def get_wind_arrow(deg):
     deg = deg % 360
     dirs = [("↓",22.5),("↙",67.5),("←",112.5),("↖",157.5),
@@ -152,11 +181,13 @@ def parse_forecast(daily, units, is_day):
         day_label = dt.strftime("%a")
         code = codes[i] if i < len(codes) else 0
         icon_name = map_weather_code_to_icon(code, is_day=1)
+        fc_condition = weathercode_to_info(code)
         forecast.append({
-            "day":  day_label,
-            "high": int(temp_max[i]) if i < len(temp_max) else 0,
-            "low":  int(temp_min[i]) if i < len(temp_min) else 0,
-            "icon": icon_path(f"{icon_name}.png"),
+            "day":       day_label,
+            "high":      int(temp_max[i]) if i < len(temp_max) else 0,
+            "low":       int(temp_min[i]) if i < len(temp_min) else 0,
+            "icon":      icon_path(f"{icon_name}.png"),
+            "condition": fc_condition,
             "moon_phase_pct":  "0",
             "moon_phase_icon": icon_path("newmoon.png"),
         })
@@ -334,6 +365,7 @@ def build_template_data(weather, aqi, config):
         "current_temperature": str(round(current.get("temperature", 0) + temp_conv)),
         "feels_like":          str(round(current.get("apparent_temperature", 0) + temp_conv)),
         "temperature_unit":    UNITS[units]["temperature"],
+        "current_condition":   weathercode_to_info(code),
         "units":               units,
         "time_format":         time_format,
         "last_refresh_time":   now.strftime("%Y-%m-%d %I:%M %p" if time_format == "12h" else "%Y-%m-%d %H:%M"),
@@ -402,20 +434,45 @@ def generate():
         with open(rendered_path, "w") as f:
             f.write(rendered)
 
-        output_path = os.path.join(OUTPUT_DIR, "weather.png")
-
-        # Find chromium binary
+        # Screenshot with Chromium — capture taller to avoid clipping,
+        # then resize to exact dimensions with Pillow
         chromium = shutil.which("chromium") or shutil.which("chromium-browser")
         if not chromium:
             raise RuntimeError("Chromium not found. Run: sudo apt install chromium")
 
+        target_w = config['width']
+        target_h = config['height']
+        # Capture 50% taller to ensure all content fits
+        capture_h = int(target_h * 1.5)
+
+        raw_path = os.path.join(OUTPUT_DIR, "weather_raw.png")
+        output_path = os.path.join(OUTPUT_DIR, "weather.png")
+
         subprocess.run([
             chromium,
             "--headless", "--disable-gpu", "--no-sandbox",
-            f"--screenshot={output_path}",
-            f"--window-size={config['width']},{config['height']}",
+            f"--screenshot={raw_path}",
+            f"--window-size={target_w},{capture_h}",
             f"file://{rendered_path}",
-        ], check=True, capture_output=True)
+        ], check=True, capture_output=True, timeout=60)
+
+        # Crop to content area (remove trailing whitespace) then resize to exact target
+        from PIL import Image
+        img = Image.open(raw_path)
+        # Crop to target width x auto-detect content height
+        # Find last non-white row
+        import numpy as np
+        arr = np.array(img.convert("L"))
+        # Find rows that aren't all white (255)
+        non_white_rows = np.where(arr.min(axis=1) < 250)[0]
+        if len(non_white_rows) > 0:
+            content_bottom = non_white_rows[-1] + 1
+        else:
+            content_bottom = target_h
+        # Crop to content, then resize to exact target dimensions
+        img = img.crop((0, 0, target_w, max(content_bottom, target_h)))
+        img = img.resize((target_w, target_h), Image.LANCZOS)
+        img.save(output_path)
 
         return jsonify({"status": "ok", "message": "Weather image generated!"})
     except Exception as e:
@@ -435,6 +492,30 @@ def rendered():
     if not os.path.exists(path):
         return "Not rendered yet.", 404
     return send_file(path)
+
+@app.route("/weather.png")
+def weather_png():
+    """Serve the generated weather image rotated 90deg for Kindle portrait display."""
+    try:
+        from PIL import Image
+
+        source_path = os.path.join(OUTPUT_DIR, "weather.png")
+
+        # Auto-generate if no image exists yet
+        if not os.path.exists(source_path):
+            generate()
+
+        # Rotate 90deg CCW and convert to 8-bit grayscale for e-ink
+        img = Image.open(source_path)
+        img = img.rotate(90, expand=True).convert("L")
+
+        kindle_path = os.path.join(OUTPUT_DIR, "weather_kindle.png")
+        img.save(kindle_path)
+
+        return send_file(kindle_path, mimetype="image/png")
+    except Exception as e:
+        logger.exception("weather.png failed")
+        return f"Error: {e}", 500
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)

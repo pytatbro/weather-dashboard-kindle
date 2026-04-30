@@ -3,8 +3,8 @@
     "latitude": 43.1594,
     "longitude": -79.2469,
     "units": "metric",
-    "width": 1448,
-    "height": 1072,
+    "width": 1648,
+    "height": 1236,
     "refresh_interval": 30,
     "time_format": "12h",
     "forecast_days": 7
