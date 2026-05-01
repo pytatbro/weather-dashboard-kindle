@@ -2,6 +2,8 @@
 
 After lots of school projects, I was left with a raspberry pi 4 board. When cleaning my room I also found my old Kindle so I think I should do something fun with it. This is a little project to turn both of them into a always-on weather dashboard.
 
+![Kindle Dashboard Example](dashboard.jpg)
+![Dashboard Design](design.png)
 
 ## Overview
 
