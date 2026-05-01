@@ -1,6 +1,5 @@
 import os
 import json
-import math
 import shutil
 import subprocess
 import requests
@@ -16,8 +15,6 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_FILE = os.path.join(BASE_DIR, "config.json")
 OUTPUT_DIR = os.path.join(BASE_DIR, "output")
 TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
-ICONS_DIR = os.path.join(BASE_DIR, "static", "icons")
-
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 UNITS = {
@@ -63,34 +60,6 @@ def load_config():
 def save_config(config):
     with open(CONFIG_FILE, "w") as f:
         json.dump(config, f, indent=4)
-
-def icon_path(name):
-    """Return absolute path to an icon file."""
-    return os.path.join(ICONS_DIR, name)
-
-def map_weather_code_to_icon(code, is_day=1):
-    if code == 0:             icon = "01d"
-    elif code == 1:           icon = "022d"
-    elif code == 2:           icon = "02d"
-    elif code == 3:           icon = "04d"
-    elif code in [51,61,80]:  icon = "51d"
-    elif code in [53,63,81]:  icon = "53d"
-    elif code in [55,65,82]:  icon = "09d"
-    elif code == 45:          icon = "50d"
-    elif code == 48:          icon = "48d"
-    elif code in [56,66]:     icon = "56d"
-    elif code in [57,67]:     icon = "57d"
-    elif code in [71,85]:     icon = "71d"
-    elif code == 73:          icon = "73d"
-    elif code in [75,86]:     icon = "13d"
-    elif code == 77:          icon = "77d"
-    elif code in [95,96,99]:  icon = "11d"
-    else:                     icon = "01d"
-
-    if is_day == 0:
-        night_map = {"01d": "01n", "022d": "022n", "02d": "02n", "10d": "10n"}
-        icon = night_map.get(icon, icon)
-    return icon
 
 def weathercode_to_info(code):
     mapping = {
@@ -166,7 +135,7 @@ def get_open_meteo_aqi(lat, lon):
 
 # ── data parsers ─────────────────────────────────────────────────────────────
 
-def parse_forecast(daily, units, is_day):
+def parse_forecast(daily, units):
     times         = daily.get("time", [])
     codes         = daily.get("weathercode", [])
     temp_max      = daily.get("temperature_2m_max", [])
@@ -180,16 +149,12 @@ def parse_forecast(daily, units, is_day):
         dt = datetime.fromisoformat(times[i])
         day_label = dt.strftime("%a")
         code = codes[i] if i < len(codes) else 0
-        icon_name = map_weather_code_to_icon(code, is_day=1)
         fc_condition = weathercode_to_info(code)
         forecast.append({
             "day":       day_label,
             "high":      int(temp_max[i]) if i < len(temp_max) else 0,
             "low":       int(temp_min[i]) if i < len(temp_min) else 0,
-            "icon":      icon_path(f"{icon_name}.png"),
             "condition": fc_condition,
-            "moon_phase_pct":  "0",
-            "moon_phase_icon": icon_path("newmoon.png"),
         })
     return forecast
 
@@ -209,7 +174,6 @@ def parse_data_points(weather_data, aqi_data, units, time_format):
             "label": "Sunrise",
             "measurement": format_time(sr_dt, time_format, include_am_pm=False),
             "unit": "" if time_format == "24h" else sr_dt.strftime("%p"),
-            "icon": icon_path("sunrise.png"),
             "arrow": None,
         })
 
@@ -221,7 +185,6 @@ def parse_data_points(weather_data, aqi_data, units, time_format):
             "label": "Sunset",
             "measurement": format_time(ss_dt, time_format, include_am_pm=False),
             "unit": "" if time_format == "24h" else ss_dt.strftime("%p"),
-            "icon": icon_path("sunset.png"),
             "arrow": None,
         })
 
@@ -232,7 +195,6 @@ def parse_data_points(weather_data, aqi_data, units, time_format):
         "label": "Wind",
         "measurement": wind_speed,
         "unit": UNITS[units]["speed"],
-        "icon": icon_path("wind.png"),
         "arrow": get_wind_arrow(wind_deg),
     })
 
@@ -243,8 +205,7 @@ def parse_data_points(weather_data, aqi_data, units, time_format):
             humidity = int(hourly["relative_humidity_2m"][i])
             break
     data_points.append({
-        "label": "Humidity", "measurement": humidity, "unit": "%",
-        "icon": icon_path("humidity.png"), "arrow": None,
+        "label": "Humidity", "measurement": humidity, "unit": "%", "arrow": None,
     })
 
     # Pressure (from hourly)
@@ -254,8 +215,7 @@ def parse_data_points(weather_data, aqi_data, units, time_format):
             pressure = int(hourly["surface_pressure"][i])
             break
     data_points.append({
-        "label": "Pressure", "measurement": pressure, "unit": "hPa",
-        "icon": icon_path("pressure.png"), "arrow": None,
+        "label": "Pressure", "measurement": pressure, "unit": "hPa", "arrow": None,
     })
 
     # UV Index (from AQI hourly)
@@ -265,8 +225,7 @@ def parse_data_points(weather_data, aqi_data, units, time_format):
             uv = round(aqi_data["hourly"]["uv_index"][i], 1)
             break
     data_points.append({
-        "label": "UV Index", "measurement": uv, "unit": "",
-        "icon": icon_path("uvi.png"), "arrow": None,
+        "label": "UV Index", "measurement": uv, "unit": "", "arrow": None,
     })
 
     # Visibility (from hourly)
@@ -282,8 +241,7 @@ def parse_data_points(weather_data, aqi_data, units, time_format):
             break
     data_points.append({
         "label": "Visibility", "measurement": vis_raw,
-        "unit": UNITS[units]["distance"],
-        "icon": icon_path("visibility.png"), "arrow": None,
+        "unit": UNITS[units]["distance"], "arrow": None,
     })
 
     # Air Quality (european AQI from AQI hourly)
@@ -296,29 +254,20 @@ def parse_data_points(weather_data, aqi_data, units, time_format):
             aqi_scale = ["Good","Fair","Moderate","Poor","Very Poor","Ext Poor"][min(int(raw)//20, 5)]
             break
     data_points.append({
-        "label": "Air Quality", "measurement": aqi_val, "unit": aqi_scale,
-        "icon": icon_path("aqi.png"), "arrow": None,
+        "label": "Air Quality", "measurement": aqi_val, "unit": aqi_scale, "arrow": None,
     })
 
     return data_points
 
 
-def parse_hourly(hourly_data, units, time_format, sunrises, sunsets):
-    times  = hourly_data.get("time", [])
-    temps  = hourly_data.get("temperature_2m", [])
+def parse_hourly(hourly_data, units, time_format):
+    times       = hourly_data.get("time", [])
+    temps       = hourly_data.get("temperature_2m", [])
     precip_prob = hourly_data.get("precipitation_probability", [])
-    rain   = hourly_data.get("precipitation", [])
-    codes  = hourly_data.get("weather_code", [])
+    rain        = hourly_data.get("precipitation", [])
 
     if units == "standard":
         temps = [t + 273.15 for t in temps]
-
-    # Build sun_map: date -> (sunrise_dt, sunset_dt)
-    sun_map = {}
-    for sr_s, ss_s in zip(sunrises, sunsets):
-        sr_dt = datetime.fromisoformat(sr_s)
-        ss_dt = datetime.fromisoformat(ss_s)
-        sun_map[sr_dt.date()] = (sr_dt, ss_dt)
 
     now = datetime.now()
     start = 0
@@ -331,16 +280,11 @@ def parse_hourly(hourly_data, units, time_format, sunrises, sunsets):
     hourly = []
     for i in range(start, min(start + 24, len(times))):
         dt = datetime.fromisoformat(times[i])
-        sr, ss = sun_map.get(dt.date(), (None, None))
-        is_day = 1 if (sr and ss and sr <= dt < ss) else 0
-        code   = codes[i] if i < len(codes) else 0
-        icon_name = map_weather_code_to_icon(code, is_day)
         hourly.append({
-            "time":        format_time(dt, time_format, hour_only=True),
-            "temperature": int(temps[i]) if i < len(temps) else 0,
+            "time":          format_time(dt, time_format, hour_only=True),
+            "temperature":   int(temps[i]) if i < len(temps) else 0,
             "precipitation": (precip_prob[i] / 100) if i < len(precip_prob) else 0,
-            "rain":        rain[i] if i < len(rain) else 0,
-            "icon":        icon_path(f"{icon_name}.png"),
+            "rain":          rain[i] if i < len(rain) else 0,
         })
     return hourly
 
@@ -351,17 +295,14 @@ def build_template_data(weather, aqi, config):
     current     = weather.get("current", {})
     daily       = weather.get("daily", {})
 
-    is_day     = current.get("is_day", 1)
-    code       = current.get("weather_code", 0)
-    icon_name  = map_weather_code_to_icon(code, is_day)
-    temp_conv  = 273.15 if units == "standard" else 0.0
+    code      = current.get("weather_code", 0)
+    temp_conv = 273.15 if units == "standard" else 0.0
 
     now = datetime.now()
 
     return {
         "title":               config["city"],
         "current_date":        now.strftime("%A, %B %d"),
-        "current_day_icon":    icon_path(f"{icon_name}.png"),
         "current_temperature": str(round(current.get("temperature", 0) + temp_conv)),
         "feels_like":          str(round(current.get("apparent_temperature", 0) + temp_conv)),
         "temperature_unit":    UNITS[units]["temperature"],
@@ -369,12 +310,9 @@ def build_template_data(weather, aqi, config):
         "units":               units,
         "time_format":         time_format,
         "last_refresh_time":   now.strftime("%Y-%m-%d %I:%M %p" if time_format == "12h" else "%Y-%m-%d %H:%M"),
-        "forecast":            parse_forecast(daily, units, is_day),
-        "data_points":         parse_data_points(weather, aqi, units, time_format),
-        "hourly_forecast":     parse_hourly(
-                                    weather.get("hourly", {}), units, time_format,
-                                    daily.get("sunrise", []), daily.get("sunset", [])
-                               ),
+        "forecast":        parse_forecast(daily, units),
+        "data_points":     parse_data_points(weather, aqi, units, time_format),
+        "hourly_forecast": parse_hourly(weather.get("hourly", {}), units, time_format),
         "plugin_settings": {
             "displayRefreshTime":  "true",
             "displayMetrics":      "true",
