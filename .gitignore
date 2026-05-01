@@ -1,2 +1,4 @@
 venv/
 output/
+logs/
+__pycache__/
