@@ -47,6 +47,11 @@ gunicorn -w 1 -b 0.0.0.0:5000 \
     app:app 2>&1 | tee -a "$LOG_FILE" &
 GUNICORN_PID=$!
 
+# Wait for Gunicorn to be ready then generate immediately
+sleep 3
+echo "Generating initial weather image..."
+/home/tuan/weather-dashboard/cron_generate.sh &
+
 echo "Server running (PID $GUNICORN_PID). Press Ctrl+C to stop."
 echo ""
 
