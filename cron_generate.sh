@@ -2,7 +2,8 @@
 cd "$(dirname "$0")"
 source venv/bin/activate
 
-LOG="/home/tuan/weather-dashboard/logs/cron.log"
+PROJECT_DIR="$(dirname "$(realpath "$0")")"
+LOG="$PROJECT_DIR/logs/cron.log"
 URL="http://localhost:5000/generate"
 MAX_RETRIES=3
 

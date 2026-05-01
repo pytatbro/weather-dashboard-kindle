@@ -1,9 +1,10 @@
 #!/bin/bash
 cd "$(dirname "$0")"
 
+PROJECT_DIR="$(pwd)"
 LOG_DIR="logs"
 LOG_FILE="$LOG_DIR/server.log"
-CRON_JOB="*/30 * * * * /home/tuan/weather-dashboard/cron_generate.sh"
+CRON_JOB="*/30 * * * * $PROJECT_DIR/cron_generate.sh"
 
 mkdir -p "$LOG_DIR"
 
@@ -19,7 +20,7 @@ cleanup() {
     fi
 
     # Remove cron job
-    crontab -l 2>/dev/null | grep -v "/home/tuan/weather-dashboard/cron_generate.sh" | crontab -
+    crontab -l 2>/dev/null | grep -v "$PROJECT_DIR/cron_generate.sh" | crontab -
     echo "Cron job removed."
 
     exit 0
@@ -27,7 +28,7 @@ cleanup() {
 trap cleanup INT TERM
 
 # Add cron job if not already present
-if ! crontab -l 2>/dev/null | grep -q "/home/tuan/weather-dashboard/cron_generate.sh"; then
+if ! crontab -l 2>/dev/null | grep -q "$PROJECT_DIR/cron_generate.sh"; then
     (crontab -l 2>/dev/null; echo "$CRON_JOB") | crontab -
     echo "Cron job added."
 else
@@ -50,7 +51,7 @@ GUNICORN_PID=$!
 # Wait for Gunicorn to be ready then generate immediately
 sleep 3
 echo "Generating initial weather image..."
-/home/tuan/weather-dashboard/cron_generate.sh &
+$PROJECT_DIR/cron_generate.sh &
 
 echo "Server running (PID $GUNICORN_PID). Press Ctrl+C to stop."
 echo ""
