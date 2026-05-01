@@ -3,7 +3,7 @@ cd "$(dirname "$0")"
 
 LOG_DIR="logs"
 LOG_FILE="$LOG_DIR/server.log"
-CRON_JOB="*/30 * * * * curl -s http://localhost:5000/generate >> /home/tuan/weather-dashboard/logs/cron.log 2>&1"
+CRON_JOB="*/30 * * * * /home/tuan/weather-dashboard/cron_generate.sh"
 
 mkdir -p "$LOG_DIR"
 
@@ -19,7 +19,7 @@ cleanup() {
     fi
 
     # Remove cron job
-    crontab -l 2>/dev/null | grep -v "$CRON_JOB" | crontab -
+    crontab -l 2>/dev/null | grep -v "/home/tuan/weather-dashboard/cron_generate.sh" | crontab -
     echo "Cron job removed."
 
     exit 0
@@ -27,7 +27,7 @@ cleanup() {
 trap cleanup INT TERM
 
 # Add cron job if not already present
-if ! crontab -l 2>/dev/null | grep -q "localhost:5000/generate"; then
+if ! crontab -l 2>/dev/null | grep -q "/home/tuan/weather-dashboard/cron_generate.sh"; then
     (crontab -l 2>/dev/null; echo "$CRON_JOB") | crontab -
     echo "Cron job added."
 else

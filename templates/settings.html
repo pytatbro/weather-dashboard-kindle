@@ -6,6 +6,8 @@
 <title>Weather Dashboard Settings</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
   :root {
     --bg: #0f0f11;
@@ -117,6 +119,54 @@
     gap: 0.8rem;
   }
 
+  /* ── coord row: lat + lng + map button ── */
+  .coord-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 0.8rem;
+    align-items: end;
+  }
+
+  .btn-map {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    padding: 0.6rem 1rem;
+    cursor: pointer;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: all 0.15s;
+    height: 38px;
+  }
+
+  .btn-map:hover { background: var(--accent-dim); }
+  .btn-map svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+  .map-hint {
+    margin-top: 0.55rem;
+    font-size: 0.75rem;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .map-hint .pin-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex-shrink: 0;
+  }
+
+  /* ── actions ── */
   .actions {
     display: flex;
     gap: 0.8rem;
@@ -141,7 +191,7 @@
     flex: 1;
   }
 
-  .btn-primary:hover { background: #6eedA0; transform: translateY(-1px); }
+  .btn-primary:hover { background: #6eeda0; transform: translateY(-1px); }
   .btn-primary:active { transform: translateY(0); }
 
   .btn-secondary {
@@ -165,6 +215,7 @@
 
   .btn-preview:hover { color: var(--text); border-color: var(--text); }
 
+  /* ── status ── */
   .status {
     margin-top: 1rem;
     padding: 0.7rem 1rem;
@@ -195,6 +246,7 @@
     display: block;
   }
 
+  /* ── preview ── */
   .preview-section {
     margin-top: 1.5rem;
   }
@@ -213,6 +265,7 @@
     font-family: 'DM Mono', monospace;
   }
 
+  /* ── misc ── */
   .dot {
     width: 8px;
     height: 8px;
@@ -233,6 +286,171 @@
     margin-top: 0.4rem;
     font-family: 'DM Mono', monospace;
   }
+
+  /* ── map modal ── */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.72);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+
+  .modal-overlay.open {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    width: min(640px, calc(100vw - 2rem));
+    overflow: hidden;
+    box-shadow: 0 32px 80px rgba(0,0,0,0.7);
+    display: flex;
+    flex-direction: column;
+    transform: translateY(12px);
+    transition: transform 0.2s;
+  }
+
+  .modal-overlay.open .modal { transform: translateY(0); }
+
+  .modal-header {
+    padding: 1.1rem 1.4rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+
+  .modal-header h2 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .modal-header h2 svg { width: 16px; height: 16px; color: var(--accent); }
+
+  .modal-close {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 1.3rem;
+    line-height: 1;
+    padding: 0.2rem 0.4rem;
+    border-radius: 6px;
+    transition: color 0.15s, background 0.15s;
+  }
+
+  .modal-close:hover { color: var(--text); background: var(--border); }
+
+  #map {
+    width: 100%;
+    height: 380px;
+    flex-shrink: 0;
+  }
+
+  /* dark-ish tile tint */
+  .leaflet-tile-pane { filter: brightness(0.85) saturate(0.7); }
+  .leaflet-container { background: #1a1a20; }
+
+  .modal-footer {
+    padding: 1rem 1.4rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    flex-shrink: 0;
+  }
+
+  .modal-coords {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0.6rem;
+  }
+
+  .coord-display {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.55rem 0.85rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .coord-display .clabel {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+  }
+
+  .coord-display .cval {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.9rem;
+    color: var(--accent);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .coord-display .cval.muted { color: var(--muted); }
+
+  .modal-footer-actions {
+    display: flex;
+    gap: 0.6rem;
+  }
+
+  .btn-cancel {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 600;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 8px;
+    padding: 0.6rem 1.2rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-cancel:hover { color: var(--text); border-color: var(--text); }
+
+  .btn-confirm {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 600;
+    background: var(--accent);
+    color: #0a0a0a;
+    border: none;
+    border-radius: 8px;
+    padding: 0.6rem 1.4rem;
+    cursor: pointer;
+    flex: 1;
+    transition: all 0.15s;
+  }
+
+  .btn-confirm:hover { background: #6eed9f; transform: translateY(-1px); }
+
+  .modal-hint {
+    font-size: 0.72rem;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    text-align: center;
+  }
 </style>
 </head>
 <body>
@@ -248,14 +466,22 @@
       <label>City Name <span>displayed on dashboard</span></label>
       <input type="text" id="city" value="{{ config.city }}" placeholder="e.g. St. Catharines">
     </div>
-    <div class="row">
-      <div class="field">
-        <label>Latitude</label>
+    <div class="field">
+      <label>Coordinates <span>latitude / longitude</span></label>
+      <div class="coord-row">
         <input type="number" id="latitude" value="{{ config.latitude }}" step="0.0001" placeholder="43.1594">
-      </div>
-      <div class="field">
-        <label>Longitude</label>
         <input type="number" id="longitude" value="{{ config.longitude }}" step="0.0001" placeholder="-79.2469">
+        <button class="btn-map" onclick="openMap()">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 1.5C5.52 1.5 3.5 3.52 3.5 6c0 3.5 4.5 8.5 4.5 8.5s4.5-5 4.5-8.5c0-2.48-2.02-4.5-4.5-4.5z"/>
+            <circle cx="8" cy="6" r="1.5"/>
+          </svg>
+          Pick on Map
+        </button>
+      </div>
+      <div class="map-hint">
+        <span class="pin-dot"></span>
+        <span>Click anywhere on the map or drag the pin — city name fills automatically</span>
       </div>
     </div>
   </div>
@@ -304,7 +530,157 @@
   </div>
 </div>
 
+<!-- MAP MODAL -->
+<div class="modal-overlay" id="mapModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M8 1.5C5.52 1.5 3.5 3.52 3.5 6c0 3.5 4.5 8.5 4.5 8.5s4.5-5 4.5-8.5c0-2.48-2.02-4.5-4.5-4.5z"/>
+          <circle cx="8" cy="6" r="1.5"/>
+        </svg>
+        Pick Location
+      </h2>
+      <button class="modal-close" onclick="closeMap()">✕</button>
+    </div>
+
+    <div id="map"></div>
+
+    <div class="modal-footer">
+      <div class="modal-coords">
+        <div class="coord-display">
+          <span class="clabel">Latitude</span>
+          <span class="cval" id="dispLat">{{ config.latitude }}</span>
+        </div>
+        <div class="coord-display">
+          <span class="clabel">Longitude</span>
+          <span class="cval" id="dispLng">{{ config.longitude }}</span>
+        </div>
+        <div class="coord-display">
+          <span class="clabel">City</span>
+          <span class="cval muted" id="dispCity">—</span>
+        </div>
+      </div>
+      <div class="modal-footer-actions">
+        <button class="btn-cancel" onclick="closeMap()">Cancel</button>
+        <button class="btn-confirm" onclick="confirmLocation()">✓ Use This Location</button>
+      </div>
+      <div class="modal-hint">// click anywhere on the map · drag the pin to fine-tune</div>
+    </div>
+  </div>
+</div>
+
 <script>
+  let map, marker;
+  let pendingLat = {{ config.latitude }};
+  let pendingLng = {{ config.longitude }};
+  let pendingCity = '';
+  let geocodeTimer = null;
+
+  // ── map modal ────────────────────────────────────────────────────────────────
+
+  function openMap() {
+    const modal = document.getElementById('mapModal');
+    modal.classList.add('open');
+
+    if (!map) {
+      map = L.map('map', { center: [pendingLat, pendingLng], zoom: 10 });
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 18,
+      }).addTo(map);
+
+      const pinIcon = L.divIcon({
+        className: '',
+        html: `<div style="
+          width:20px; height:20px;
+          background:#4ade80;
+          border:3px solid #fff;
+          border-radius:50% 50% 50% 0;
+          transform:rotate(-45deg);
+          box-shadow:0 3px 12px rgba(74,222,128,0.6);
+        "></div>`,
+        iconSize: [20, 20],
+        iconAnchor: [10, 18],
+      });
+
+      marker = L.marker([pendingLat, pendingLng], { draggable: true, icon: pinIcon }).addTo(map);
+
+      marker.on('dragend', e => {
+        const p = e.target.getLatLng();
+        setPending(p.lat, p.lng, true);
+      });
+
+      map.on('click', e => {
+        marker.setLatLng(e.latlng);
+        setPending(e.latlng.lat, e.latlng.lng, true);
+      });
+
+    } else {
+      const lat = parseFloat(document.getElementById('latitude').value) || pendingLat;
+      const lng = parseFloat(document.getElementById('longitude').value) || pendingLng;
+      map.setView([lat, lng], map.getZoom());
+      marker.setLatLng([lat, lng]);
+      setPending(lat, lng, false);
+      setTimeout(() => map.invalidateSize(), 50);
+    }
+  }
+
+  function setPending(lat, lng, doGeocode) {
+    pendingLat = lat;
+    pendingLng = lng;
+    document.getElementById('dispLat').textContent = lat.toFixed(4);
+    document.getElementById('dispLng').textContent = lng.toFixed(4);
+
+    if (doGeocode) {
+      document.getElementById('dispCity').textContent = '…';
+      document.getElementById('dispCity').classList.add('muted');
+      clearTimeout(geocodeTimer);
+      geocodeTimer = setTimeout(() => reverseGeocode(lat, lng), 500);
+    }
+  }
+
+  async function reverseGeocode(lat, lng) {
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`,
+        { headers: { 'Accept-Language': 'en' } }
+      );
+      const data = await res.json();
+      const addr = data.address || {};
+      const city = addr.city || addr.town || addr.village || addr.municipality
+                || addr.county || addr.state_district
+                || data.display_name?.split(',')[0]
+                || '';
+      pendingCity = city;
+      const el = document.getElementById('dispCity');
+      el.textContent = city || '—';
+      el.classList.toggle('muted', !city);
+    } catch(e) {
+      document.getElementById('dispCity').textContent = '—';
+    }
+  }
+
+  function confirmLocation() {
+    document.getElementById('latitude').value = pendingLat.toFixed(4);
+    document.getElementById('longitude').value = pendingLng.toFixed(4);
+    if (pendingCity) {
+      document.getElementById('city').value = pendingCity;
+    }
+    closeMap();
+  }
+
+  function closeMap() {
+    document.getElementById('mapModal').classList.remove('open');
+  }
+
+  document.getElementById('mapModal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeMap();
+  });
+
+  // ── settings form ────────────────────────────────────────────────────────────
+
   function showStatus(msg, type) {
     const el = document.getElementById('status');
     el.textContent = msg;
@@ -313,12 +689,12 @@
 
   function getFormData() {
     return {
-      city: document.getElementById('city').value,
-      latitude: document.getElementById('latitude').value,
-      longitude: document.getElementById('longitude').value,
-      units: document.getElementById('units').value,
-      width: document.getElementById('width').value,
-      height: document.getElementById('height').value,
+      city:             document.getElementById('city').value,
+      latitude:         document.getElementById('latitude').value,
+      longitude:        document.getElementById('longitude').value,
+      units:            document.getElementById('units').value,
+      width:            document.getElementById('width').value,
+      height:           document.getElementById('height').value,
       refresh_interval: document.getElementById('refresh_interval').value,
     };
   }
@@ -326,14 +702,13 @@
   async function saveSettings() {
     showStatus('Saving...', 'loading');
     try {
-      const res = await fetch('/save', {
+      await fetch('/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(getFormData())
+        body: JSON.stringify(getFormData()),
       });
-      const data = await res.json();
       showStatus('✓ Settings saved successfully', 'success');
-    } catch (e) {
+    } catch(e) {
       showStatus('✗ Failed to save: ' + e.message, 'error');
     }
   }
@@ -341,32 +716,28 @@
   async function generateNow() {
     showStatus('⏳ Fetching weather data...', 'loading');
     try {
-      // Save first, then generate
       await fetch('/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(getFormData())
+        body: JSON.stringify(getFormData()),
       });
 
-      const res = await fetch('/generate');
+      const res  = await fetch('/generate');
       const data = await res.json();
 
       if (data.status === 'ok') {
         showStatus('✓ ' + data.message, 'success');
-        // Show preview
-        const previewSection = document.getElementById('previewSection');
-        const previewImg = document.getElementById('previewImg');
-        previewImg.src = '/preview?t=' + Date.now();
-        previewSection.style.display = 'block';
+        const previewImg     = document.getElementById('previewImg');
+        previewImg.src       = '/preview?t=' + Date.now();
+        document.getElementById('previewSection').style.display = 'block';
       } else {
         showStatus('✗ Error: ' + data.message, 'error');
       }
-    } catch (e) {
+    } catch(e) {
       showStatus('✗ ' + e.message, 'error');
     }
   }
 
-  // Check if preview already exists on load
   window.onload = async () => {
     try {
       const res = await fetch('/preview', { method: 'HEAD' });
